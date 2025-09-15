@@ -1,0 +1,170 @@
+body, html {
+  height: 100%;
+  margin: 0;
+  font-family: Arial, sans-serif;
+}
+
+.background {
+  background: linear-gradient(#aa1616, #4b0404);
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding-top: 70px; /* igual à altura da faixa */
+}
+
+/* Barra superior fixa */
+.top-bar {
+  background-color: rgba(255, 255, 255, 0.05);
+  padding: 10px 15px;
+  position: fixed;
+  top: 0;
+  width: 100%;
+  z-index: 1000;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.top-bar img {
+  height: 40px;
+}
+
+.top-bar h5 {
+  color: white;
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+/* Container principal */
+.card-container {
+  background-color: rgba(183, 208, 218, 0.767);
+  width: 90%;
+  max-width: 1200px;
+  height: 700px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  margin-top: 0;
+  border-radius: 10px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+}
+
+.card-container .row {
+  height: 100%;
+}
+
+/* Botões e ferramentas */
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+}
+
+#tableArea {
+  flex: 1;
+  overflow-y: auto;
+  max-height: 500px;
+}
+
+#formInputs {
+  max-height: 100%;
+  overflow-y: auto;
+}
+
+.tabela-area {
+  transition: opacity 0.3s ease;
+}
+
+.d-none {
+  display: none !important;
+}
+
+/* ----------------- RESPONSIVIDADE ----------------- */
+
+/* Tablets (<= 992px) */
+@media (max-width: 992px) {
+  .card-container {
+    height: auto;
+    padding: 15px;
+  }
+
+  .card-container .row {
+    flex-direction: column;
+  }
+
+  #tableArea {
+    max-height: 350px;
+  }
+
+  #formInputs {
+    margin-top: 15px;
+    max-height: none;
+  }
+}
+
+/* Celulares grandes (<= 768px) */
+@media (max-width: 768px) {
+  .top-bar {
+    flex-direction: column;
+    align-items: flex-start;
+    text-align: left;
+    padding: 8px 12px;
+  }
+
+  .top-bar img {
+    height: 32px;
+  }
+
+  .top-bar h5 {
+    font-size: 1rem;
+  }
+
+  .card-container {
+    width: 95%;
+    padding: 10px;
+  }
+
+  table th, table td {
+    font-size: 0.85rem;
+    padding: 6px;
+  }
+
+  .toolbar button {
+    flex: 1 1 100%;
+  }
+}
+
+/* Celulares pequenos (<= 480px) */
+@media (max-width: 480px) {
+  .top-bar {
+    padding: 6px 10px;
+  }
+
+  .top-bar img {
+    height: 28px;
+  }
+
+  .top-bar h5 {
+    font-size: 0.9rem;
+  }
+
+  .card-container {
+    width: 100%;
+    border-radius: 0;
+    box-shadow: none;
+    height: auto;
+  }
+
+  table th, table td {
+    font-size: 0.75rem;
+    padding: 4px;
+  }
+
+  .toolbar {
+    flex-direction: column;
+  }
+}

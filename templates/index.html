@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Metas Frialto</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<div class="background">
+
+  <!-- Cabeçalho fixo -->
+  <div class="top-bar d-flex justify-content-center align-items-center gap-3">
+    <img src="{{ url_for('static', filename='images/logo_frialto.svg') }}" alt="Logo Frialto">
+    <h5 class="mb-0">Metas Frialto</h5>
+  </div>
+
+  <div class="card-container shadow-lg p-4 rounded mt-3">
+
+    <!-- Tabela única -->
+    <div class="row flex-grow-1">
+      <div class="col-md-8 d-flex flex-column">
+        <div class="toolbar mb-3 d-flex gap-2">
+          <button class="btn btn-danger btn-sm flex-fill" onclick="removeRow()">Remover linha</button>
+          <button class="btn btn-secondary btn-sm flex-fill" onclick="moveRowUp()">Subir linha</button>
+          <button class="btn btn-secondary btn-sm flex-fill" onclick="moveRowDown()">Descer linha</button>
+        </div>
+
+        <div id="tableArea" class="flex-grow-1 overflow-auto">
+          <table id="tabelaMetas" class="table table-bordered table-sm bg-light">
+            <thead>
+              <tr>
+                <th>Data</th>
+                <th>Unidade</th>
+                <th>Tipo de Meta</th>
+                <th>Meta</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in data_desossa %}
+                <tr>
+                  {% for cell in row %}
+                    <td contenteditable {% if loop.index0 == 0 and (cell.__class__.__name__ == 'datetime' or cell.__class__.__name__ == 'Timestamp') %}data-date="{{ cell.strftime('%Y-%m-%d') }}"{% endif %}>
+                      {% if cell.__class__.__name__ == 'datetime' or cell.__class__.__name__ == 'Timestamp' %}
+                        {{ cell.strftime('%Y-%m-%d') }}
+                      {% else %}
+                        {{ cell }}
+                      {% endif %}
+                    </td>
+                  {% endfor %}
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Formulário -->
+      <div class="col-md-4">
+        <h5 class="text-white">Inserir dados</h5>
+        <form id="formInputs">
+          <div class="mb-2">
+          <label class="form-label text-white">Data</label>
+          <input id="dataInput" type="date" min="2025-01-01" max="2030-12-31" class="form-control" />
+          </div>
+          <div class="mb-2">
+            <label class="form-label text-white">Unidade</label>
+            <input type="text" class="form-control" id="unidadeInput">
+          </div>
+          <div class="mb-2">
+            <label class="form-label text-white">Tipo de Meta</label>
+            <select class="form-select" id="tipoMetaSelect">
+              <option value="Desossa">Desossa</option>
+              <option value="Abate">Abate</option>
+            </select>
+          </div>
+          <div class="mb-2">
+            <label class="form-label text-white">Meta</label>
+            <input type="text" class="form-control" id="metaInput">
+          </div>
+          <button type="button" class="btn btn-info w-100 mt-2" onclick="addRowFromForm()">Adicionar Meta</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Botão de salvar -->
+    <div class="text-center mt-4">
+      <button id="saveBtn" class="btn btn-success w-100 mt-2">Salvar</button>
+    </div>
+  </div>
+</div>
+<script>
+let originalData = [];
+let selectedRow = null;
+
+// Funções auxiliares usando regex
+function formatarMeta(valor) {
+  // Remove tudo que não é número ou ponto/virgula
+  let clean = valor.replace(/[^\d.,-]/g, '').replace(',', '.');
+  let num = parseFloat(clean);
+  if (isNaN(num)) num = 0;
+  return num.toFixed(2).replace('.', ',');
+}
+
+function formatarDataDisplay(data) {
+  const str = String(data).trim();
+
+  // Se for objeto Date
+  if (data instanceof Date && !isNaN(data)) {
+    const dia = String(data.getDate()).padStart(2, '0');
+    const mes = String(data.getMonth() + 1).padStart(2, '0');
+    const ano = data.getFullYear();
+    return `${dia}/${mes}/${ano}`;
+  }
+
+  // Remove hora se presente
+  const semHora = str.split(' ')[0];
+
+  // Tenta YYYY-MM-DD
+  const matchYMD = semHora.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (matchYMD) {
+    return `${matchYMD[3]}/${matchYMD[2]}/${matchYMD[1]}`;
+  }
+
+  // Tenta DD/MM/YYYY
+  const matchDMY = semHora.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (matchDMY) {
+    return `${matchDMY[1]}/${matchDMY[2]}/${matchDMY[3]}`;
+  }
+
+  // Tenta forçar com 8 dígitos
+  const onlyDigits = semHora.replace(/[^\d]/g, '');
+  if (onlyDigits.length === 8) {
+    return `${onlyDigits.slice(0,2)}/${onlyDigits.slice(2,4)}/${onlyDigits.slice(4)}`;
+  }
+
+  return semHora;
+}
+
+function formatDateToISO(data) {
+  let matchDMY = data.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (matchDMY) {
+    return `${matchDMY[3]}-${matchDMY[2]}-${matchDMY[1]}`;
+  }
+  return data; // se já estiver ISO
+}
+
+// Formata toda a tabela
+function formatarTabelaVisual() {
+  const linhas = document.querySelectorAll('#tabelaMetas tbody tr');
+  linhas.forEach(tr => {
+    Array.from(tr.children).forEach((td, idx) => {
+      if (idx === 0) { // Data
+        let raw = td.textContent.trim();
+        let iso = formatDateToISO(raw);
+        td.dataset.date = iso;
+        td.textContent = formatarDataDisplay(iso);
+      }
+      if (idx === 3) { // Meta
+        td.textContent = formatarMeta(td.textContent.trim());
+      }
+    });
+  });
+}
+
+// Seleção de linha
+function activateRowSelection() {
+  document.querySelectorAll('#tabelaMetas tbody tr').forEach(tr => {
+    tr.onclick = () => {
+      if (selectedRow) selectedRow.classList.remove('table-active');
+      selectedRow = tr;
+      selectedRow.classList.add('table-active');
+    };
+  });
+}
+
+// Operações de linha
+function removeRow() {
+  if (selectedRow) {
+    selectedRow.remove();
+    selectedRow = null;
+  } else alert('Selecione uma linha para remover.');
+}
+
+function moveRowUp() {
+  if (selectedRow && selectedRow.previousElementSibling) {
+    selectedRow.parentNode.insertBefore(selectedRow, selectedRow.previousElementSibling);
+  }
+}
+
+function moveRowDown() {
+  if (selectedRow && selectedRow.nextElementSibling) {
+    selectedRow.parentNode.insertBefore(selectedRow.nextElementSibling, selectedRow);
+  }
+}
+
+// Adiciona nova linha
+function addRowFromForm() {
+  const tabela = document.querySelector('#tabelaMetas tbody');
+  const data = document.getElementById('dataInput').value;
+  const unidade = document.getElementById('unidadeInput').value;
+  const tipoMeta = document.getElementById('tipoMetaSelect').value;
+  const meta = document.getElementById('metaInput').value;
+
+  if (!data || !unidade || !tipoMeta || !meta) {
+    alert("Preencha todos os campos.");
+    return;
+  }
+
+  // Validação da data mínima e máxima
+  const dataMin = new Date('2025-01-01');
+  const dataMax = new Date('2030-12-31');
+  const dataInput = new Date(data);
+  if (dataInput < dataMin) {
+    alert("A data não pode ser anterior a 01/01/2025.");
+    return;
+  }
+  if (dataInput > dataMax) {
+    alert("A data não pode ser posterior a 31/12/2030.");
+    return;
+  }
+
+  // Validação de formato de data
+  // Aceita apenas datas válidas no formato YYYY-MM-DD
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(data)) {
+    alert("Formato de data inválido. Use o seletor de data.");
+    return;
+  }
+  // Verifica se a data é válida
+  const partes = data.split('-');
+  const ano = parseInt(partes[0], 10);
+  const mes = parseInt(partes[1], 10);
+  const dia = parseInt(partes[2], 10);
+  const dataObj = new Date(ano, mes - 1, dia);
+  if (dataObj.getFullYear() !== ano || dataObj.getMonth() !== mes - 1 || dataObj.getDate() !== dia) {
+    alert("Data inválida.");
+    return;
+  }
+
+  const tr = document.createElement('tr');
+  [data, unidade, tipoMeta, meta].forEach((val, idx) => {
+    const td = document.createElement('td');
+    td.contentEditable = true;
+
+    if (idx === 0) {
+      td.dataset.date = val;
+      td.textContent = formatarDataDisplay(val);
+    } else if (idx === 3) {
+      td.textContent = formatarMeta(val);
+    } else {
+      td.textContent = val;
+    }
+
+    tr.appendChild(td);
+  });
+
+  tabela.appendChild(tr);
+  document.getElementById('formInputs').reset();
+  activateRowSelection();
+  formatarTabelaVisual(); // Atualiza a visualização da tabela após adicionar linha
+}
+
+// Inicialização
+window.onload = function() {
+  formatarTabelaVisual();
+  const tabela = document.getElementById('tabelaMetas');
+  activateRowSelection();
+
+  // Carregar opções do select
+  fetch('/static/tipo_meta.json')
+    .then(res => res.json())
+    .then(opcoes => {
+      const select = document.getElementById('tipoMetaSelect');
+      select.innerHTML = '<option value="">Selecione...</option>';
+      opcoes.forEach(opcao => {
+        const option = document.createElement('option');
+        option.value = opcao;
+        option.textContent = opcao;
+        select.appendChild(option);
+      });
+    });
+
+  formatarTabelaVisual();
+
+  // Capturar estado inicial da tabela (após formatar visual)
+  originalData = Array.from(tabela.querySelectorAll('tbody tr')).map(tr =>
+    Array.from(tr.children).map((td, idx) => {
+      if (idx === 0 && td.dataset.date) return td.dataset.date;
+      if (idx === 3) return td.textContent.trim().replace(',', '.');
+      return td.textContent.trim();
+    })
+  );
+  formatarTabelaVisual();
+
+// Salvar
+// (Removido: declaração duplicada de currentData)
+
+  document.getElementById('saveBtn').onclick = async function() {
+    const columns = ['Data', 'Unidade', 'Tipo de Meta', 'Meta'];
+    const currentData = Array.from(tabela.querySelectorAll('tbody tr')).map(tr =>
+      Array.from(tr.children).map((td, idx) => {
+        if (idx === 0) return td.dataset.date || formatDateToISO(td.textContent.trim());
+        if (idx === 3) return td.textContent.trim().replace(',', '.');
+        return td.textContent.trim();
+      })
+    );
+
+    if (currentData.length === 0) {
+      alert("Não há linhas para salvar.");
+      return;
+    }
+
+    if (currentData.some(row => row.some(cell => cell === ""))) {
+      alert("Existem linhas com campos em branco. Preencha todas as células antes de salvar.");
+      return;
+    }
+
+    if (JSON.stringify(currentData) === JSON.stringify(originalData)) {
+      alert("Nenhuma alteração detectada.");
+      return;
+    }
+
+    const res = await fetch(`/save_metas`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ columns, data: currentData })
+    });
+
+    const result = await res.json();
+    if (result.status === 'sucesso') originalData = currentData;
+    alert(result.status || result.error);
+  };
+
+  // Formatação inline de meta
+  tabela.querySelector('tbody').addEventListener('input', e => {
+    const td = e.target;
+    const tr = td.parentElement;
+    if (!tr) return;
+    const index = Array.from(tr.children).indexOf(td);
+    if (index === 3) td.textContent = formatarMeta(td.textContent.trim());
+  });
+};
+</script>
+</body>
+</html>
