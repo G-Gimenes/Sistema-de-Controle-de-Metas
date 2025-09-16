@@ -53,8 +53,8 @@ http://localhost:5000
 
 
 # 📌 Observações
--O arquivo Excel é salvo automaticamente na pasta /uploads.
--A aplicação é responsiva e pode ser usada em dispositivos móveis.
--Recomenda-se o uso de navegadores atualizados para melhor compatibilidade.
+-O arquivo Excel é salvo automaticamente na pasta /uploads
+-A aplicação é responsiva e pode ser usada em dispositivos móveis
+-Recomenda-se o uso de navegadores atualizados para melhor compatibilidade
 -Login simples incluído: a aplicação conta com uma tela de login básica, que não fornece segurança criptografada. Foi pensado para sistemas internos, onde a principal necessidade é apenas controlar o acesso via
-logs.
+logs
