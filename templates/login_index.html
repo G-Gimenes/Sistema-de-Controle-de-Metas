@@ -4,6 +4,11 @@
     <meta charset="UTF-8">
     <title>Login Interno</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    
+    <!-- Firebase App (necessário) -->
+    <script src="https://www.gstatic.com/firebasejs/10.6.0/firebase-app-compat.js"></script>
+    <!-- Firebase Auth -->
+    <script src="https://www.gstatic.com/firebasejs/10.6.0/firebase-auth-compat.js"></script>
 </head>
 <body>
     <div class="container">
@@ -12,16 +17,49 @@
                 <p style="color: red;">{{ erro }}</p>
             {% endif %}
             <h2>Login</h2>
-            <form method="POST">
-                <input type="text" name="usuario" placeholder="Usuário" required>
-                <input type="password" name="senha" placeholder="Senha" required>
+            <!-- Formulário agora com ID para JS -->
+            <form id="loginForm">
+                <input type="email" id="usuario" placeholder="Usuário" required>
+                <input type="password" id="senha" placeholder="Senha" required>
                 <button type="submit">Entrar</button>
             </form>
         </div>
         <div class="content-box">
             <h1>Bem-vindo</h1>
-            <p>Sistema Interno Frialto</p>
+            <p>Sistema Interno Metas</p>
         </div>
     </div>
+
+    <script>
+        document.getElementById("loginForm").addEventListener("submit", async (e) => {
+            e.preventDefault();
+
+            const email = document.getElementById("usuario").value;
+            const senha = document.getElementById("senha").value;
+
+            try {
+                // Login no Firebase
+                const userCredential = await firebase.auth().signInWithEmailAndPassword(email, senha);
+                const idToken = await userCredential.user.getIdToken();
+
+                // Envia token para o Flask via POST
+                const res = await fetch("/", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ token: idToken })
+                });
+
+                const data = await res.json();
+                if(data.status === "sucesso") {
+                    window.location.href = "/dashboard";
+                } else {
+                    alert("Erro no login!");
+                }
+            } catch (err) {
+                alert("Usuário ou senha inválidos!");
+                console.error(err);
+            }
+        });
+    </script>
 </body>
 </html>

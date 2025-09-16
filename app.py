@@ -5,9 +5,12 @@ import os
 import json
 from flask_cors import CORS
 from threading import Lock
+import firebase_admin
+from firebase_admin import credentials, auth
+from flask import request
 
 app = Flask(__name__)
-app.secret_key = 'sua_chave_secreta'
+app.secret_key = 'metasapp'
 CORS(app)
 
 # Caminhos
@@ -18,6 +21,9 @@ EXCEL_FILE = os.path.join(UPLOAD_FOLDER, 'meta_industria.xlsx')
 LOG_PATH = os.path.join(BASE_DIR, "logs", "acessos.log")
 USERS_PATH = os.path.join(BASE_DIR, "static", "usuarios.json")
 os.makedirs(os.path.dirname(LOG_PATH), exist_ok=True)
+
+cred = credentials.Certificate(r"Insira seu path/ arquivo_key.json")
+firebase_admin.initialize_app(cred)
 
 lock = Lock()
 
@@ -37,32 +43,40 @@ def parse_date(val):
             continue
     return pd.NaT
 
+def verificar_token(token):
+    try:
+        decoded_token = auth.verify_id_token(token)
+        uid = decoded_token['uid']
+        return uid
+    except Exception as e:
+        return None
+    
 # Rota de login
 @app.route("/", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
-        usuario = request.form["usuario"]
+        email = request.form["usuario"]
         senha = request.form["senha"]
-        usuarios = carregar_usuarios()
-
-        for u in usuarios:
-            if u["usuario"] == usuario and u["senha"] == senha:
-                session["usuario"] = usuario
-                horario = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                with open(LOG_PATH, "a") as f:
-                    f.write(f"{usuario} entrou às {horario}\n")
-                return redirect("/dashboard")
-
-        return render_template("login_index.html", erro="Usuário ou senha inválidos")
+        try:
+            # Login no Firebase
+            user = auth.get_user_by_email(email)  # Confere se o usuário existe
+            # Para autenticação real (senha), você precisará usar Firebase Client SDK no front
+            session["usuario"] = email
+            horario = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            with open(LOG_PATH, "a") as f:
+                f.write(f"{email} entrou às {horario}\n")
+            return redirect("/dashboard")
+        except Exception as e:
+            return render_template("login_index.html", erro="Usuário ou senha inválidos")
 
     return render_template("login_index.html")
 
-# Rota protegida
 @app.route("/dashboard")
-def index():
-    if "usuario" not in session:
+def dashboard():
+    token = request.cookies.get('firebase_token')
+    if not token or not verificar_token(token):
         return redirect("/")
-
+    
     try:
         columns = ['Data', 'Unidade', 'Tipo de Meta', 'Meta']
         if not os.path.exists(EXCEL_FILE):
