@@ -16,9 +16,9 @@ Aplicação web desenvolvida com Flask e frontend em HTML/JavaScript/Bootstrap, 
 - 
 
 # 🧰 Tecnologias Utilizadas
-| Backend | Python, Flask, Pandas, OpenPyXL | 
-| Frontend | HTML5, CSS3, JavaScript, Bootstrap 5 | 
-| Extras | Flask-CORS, Threading, Manipulação de Excel | 
+- Backend: Python, Flask, Pandas, OpenPyXL | 
+- Frontend: HTML5, CSS3, JavaScript, Bootstrap 5 | 
+- Extras: Flask-CORS, Threading, Manipulação de Excel | 
 
 
 # 📁 Estrutura do Projeto
