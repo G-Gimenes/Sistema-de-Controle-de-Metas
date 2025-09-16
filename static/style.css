@@ -1,170 +1,82 @@
-body, html {
-  height: 100%;
+/* Reset básico */
+body {
   margin: 0;
   font-family: Arial, sans-serif;
-}
-
-.background {
-  background: linear-gradient(#aa1616, #4b0404);
+  background-color: #f4f4f4;
   height: 100vh;
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  padding-top: 70px; /* igual à altura da faixa */
-}
-
-/* Barra superior fixa */
-.top-bar {
-  background-color: rgba(255, 255, 255, 0.05);
-  padding: 10px 15px;
-  position: fixed;
-  top: 0;
-  width: 100%;
-  z-index: 1000;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.top-bar img {
-  height: 40px;
-}
-
-.top-bar h5 {
-  color: white;
-  margin: 0;
-  font-size: 1.25rem;
-}
-
-/* Container principal */
-.card-container {
-  background-color: rgba(183, 208, 218, 0.767);
-  width: 90%;
-  max-width: 1200px;
-  height: 700px;
   overflow: hidden;
+}
+
+/* Container principal com duas áreas lado a lado */
+.container {
+  display: flex;
+  height: 100vh;
+  width: 100%;
+}
+
+/* Área de conteúdo à esquerda */
+.content-box {
+  width: 70%;
+  padding: 40px;
+  background-color: #ecf0f1;
   display: flex;
   flex-direction: column;
-  margin-top: 0;
-  border-radius: 10px;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+  justify-content: center;   /* Centraliza verticalmente */
+  align-items: flex-start;   /* Alinha horizontalmente à esquerda */
+  text-align: left;          /* Alinha o texto à esquerda */
 }
 
-.card-container .row {
-  height: 100%;
-}
-
-/* Botões e ferramentas */
-.toolbar {
+/* Barra de login fixa à direita */
+.login-box {
+  width: 30%;
+  background-color: #2c3e50;
+  color: white;
   display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  justify-content: center;
+  flex-direction: column;
+  justify-content: center; /* Centraliza verticalmente */
+  align-items: center;     /* Centraliza horizontalmente */
+  padding: 40px;
+  text-align: center;
 }
 
-#tableArea {
-  flex: 1;
-  overflow-y: auto;
-  max-height: 500px;
+/* Título do login */
+.login-box h2 {
+  margin-bottom: 20px;
+  font-size: 24px;
 }
 
-#formInputs {
-  max-height: 100%;
-  overflow-y: auto;
+/* Campos de entrada */
+.login-box input {
+  margin-bottom: 15px;
+  padding: 10px;
+  width: 100%;
+  max-width: 300px;
+  border: none;
+  border-radius: 5px;
 }
 
-.tabela-area {
-  transition: opacity 0.3s ease;
+/* Botão de login */
+.login-box button {
+  padding: 10px 20px;
+  background-color: #3498db;
+  border: none;
+  color: white;
+  border-radius: 5px;
+  cursor: pointer;
+  margin-top: 10px;
+  width: 100%;
+  max-width: 150px;
 }
 
-.d-none {
-  display: none !important;
-}
-
-/* ----------------- RESPONSIVIDADE ----------------- */
-
-/* Tablets (<= 992px) */
-@media (max-width: 992px) {
-  .card-container {
-    height: auto;
-    padding: 15px;
-  }
-
-  .card-container .row {
-    flex-direction: column;
-  }
-
-  #tableArea {
-    max-height: 350px;
-  }
-
-  #formInputs {
-    margin-top: 15px;
-    max-height: none;
-  }
-}
-
-/* Celulares grandes (<= 768px) */
+/* Responsividade para telas menores */
 @media (max-width: 768px) {
-  .top-bar {
+  .container {
     flex-direction: column;
-    align-items: flex-start;
-    text-align: left;
-    padding: 8px 12px;
   }
 
-  .top-bar img {
-    height: 32px;
-  }
-
-  .top-bar h5 {
-    font-size: 1rem;
-  }
-
-  .card-container {
-    width: 95%;
-    padding: 10px;
-  }
-
-  table th, table td {
-    font-size: 0.85rem;
-    padding: 6px;
-  }
-
-  .toolbar button {
-    flex: 1 1 100%;
-  }
-}
-
-/* Celulares pequenos (<= 480px) */
-@media (max-width: 480px) {
-  .top-bar {
-    padding: 6px 10px;
-  }
-
-  .top-bar img {
-    height: 28px;
-  }
-
-  .top-bar h5 {
-    font-size: 0.9rem;
-  }
-
-  .card-container {
+  .login-box,
+  .content-box {
     width: 100%;
-    border-radius: 0;
-    box-shadow: none;
     height: auto;
-  }
-
-  table th, table td {
-    font-size: 0.75rem;
-    padding: 4px;
-  }
-
-  .toolbar {
-    flex-direction: column;
   }
 }

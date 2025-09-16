@@ -1,52 +1,75 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, redirect, session, jsonify
+from datetime import datetime
 import pandas as pd
 import os
+import json
 from flask_cors import CORS
 from threading import Lock
-from datetime import datetime
 
 app = Flask(__name__)
 app.secret_key = 'sua_chave_secreta'
 CORS(app)
 
-# 1. Definir caminhos absolutos e criar pasta
+# Caminhos
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 UPLOAD_FOLDER = os.path.join(BASE_DIR, 'uploads')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 EXCEL_FILE = os.path.join(UPLOAD_FOLDER, 'meta_industria.xlsx')
+LOG_PATH = os.path.join(BASE_DIR, "logs", "acessos.log")
+USERS_PATH = os.path.join(BASE_DIR, "static", "usuarios.json")
+os.makedirs(os.path.dirname(LOG_PATH), exist_ok=True)
 
 lock = Lock()
 
-# 2. Funções de data
+# Funções auxiliares
+def carregar_usuarios():
+    with open(USERS_PATH, "r", encoding="utf-8") as f:
+        return json.load(f)
+
 def parse_date(val):
     if val is None or str(val).strip() == '':
         return pd.NaT
     val = str(val).strip()
     for fmt in ("%Y-%m-%d", "%d/%m/%Y"):
         try:
-            return datetime.strptime(val, fmt).date()  # Retorna date, não datetime
+            return datetime.strptime(val, fmt).date()
         except ValueError:
             continue
     return pd.NaT
 
-def format_date_for_excel(dt):
-    if isinstance(dt, datetime):
-        return dt.date()
-    return dt
+# Rota de login
+@app.route("/", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        usuario = request.form["usuario"]
+        senha = request.form["senha"]
+        usuarios = carregar_usuarios()
 
-# 3. Rota index: cria arquivo se não existir e carrega dados
-@app.route('/')
+        for u in usuarios:
+            if u["usuario"] == usuario and u["senha"] == senha:
+                session["usuario"] = usuario
+                horario = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                with open(LOG_PATH, "a") as f:
+                    f.write(f"{usuario} entrou às {horario}\n")
+                return redirect("/dashboard")
+
+        return render_template("login_index.html", erro="Usuário ou senha inválidos")
+
+    return render_template("login_index.html")
+
+# Rota protegida
+@app.route("/dashboard")
 def index():
+    if "usuario" not in session:
+        return redirect("/")
+
     try:
         columns = ['Data', 'Unidade', 'Tipo de Meta', 'Meta']
-
-        # Cria Excel vazio com cabeçalhos na primeira visita
         if not os.path.exists(EXCEL_FILE):
             empty = pd.DataFrame(columns=columns)
             with lock:
                 empty.to_excel(EXCEL_FILE, index=False, engine='openpyxl')
 
-        # Lê tudo como string (preserva formato original)
         df = pd.read_excel(EXCEL_FILE, dtype=str, engine='openpyxl')
         data = df.fillna('').values.tolist()
 
@@ -59,22 +82,18 @@ def index():
     except Exception as e:
         return f"<h3>Erro ao carregar arquivo: {e}</h3>"
 
-# 4. Rota save_metas: recebe JSON, converte, grava e formata no Excel
+# Rota para salvar metas
 @app.route('/save_metas', methods=['POST'])
 def save_metas():
+    if "usuario" not in session:
+        return jsonify({'error': 'Não autenticado'}), 403
+
     try:
         payload = request.json
         data = payload.get('data', [])
         columns = ['Data', 'Unidade', 'Tipo de Meta', 'Meta']
 
         df = pd.DataFrame(data, columns=columns)
-
-        # Validação de colunas
-        missing = [c for c in columns if c not in df.columns]
-        if missing:
-            return jsonify({'error': f'Colunas ausentes: {missing}'}), 400
-
-        # Conversão Data e Meta
         df['Data'] = df['Data'].apply(parse_date)
         df['Meta'] = (
             df['Meta']
@@ -84,12 +103,8 @@ def save_metas():
             .round(2)
         )
 
-        # Grava no Excel
         with lock:
-            # Salva sem índice
             df.to_excel(EXCEL_FILE, index=False, engine='openpyxl')
-
-            # Aplica formatação
             from openpyxl import load_workbook
             wb = load_workbook(EXCEL_FILE)
             ws = wb.active
@@ -109,6 +124,12 @@ def save_metas():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-# 5. Inicializa o servidor
-if __name__ == '__main__':
+# Logout opcional
+@app.route("/logout")
+def logout():
+    session.pop("usuario", None)
+    return redirect("/")
+
+# Inicializa
+if __name__ == "__main__":
     app.run(debug=True)
